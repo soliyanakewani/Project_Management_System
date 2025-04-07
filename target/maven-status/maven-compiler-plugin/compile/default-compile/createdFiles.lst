@@ -1,4 +1,5 @@
 com\example\ProjectHandler.class
 com\example\AuthenticationHandler.class
 com\example\DatabaseConnector.class
+com\example\TaskHandler.class
 com\example\MainVerticle.class

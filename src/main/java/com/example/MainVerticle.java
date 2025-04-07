@@ -5,6 +5,7 @@ import io.vertx.core.Promise;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
@@ -30,6 +31,7 @@ public class MainVerticle extends AbstractVerticle {
         // Router Setup
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
+        router.route().handler(CorsHandler.create("*").allowedMethod(io.vertx.core.http.HttpMethod.GET).allowedMethod(io.vertx.core.http.HttpMethod.POST).allowedMethod(io.vertx.core.http.HttpMethod.PUT).allowedMethod(io.vertx.core.http.HttpMethod.DELETE).allowedMethod(io.vertx.core.http.HttpMethod.OPTIONS));
 
         // JWT Auth Setup
         JWTAuth jwtAuth = JWTAuth.create(vertx, new JWTAuthOptions()
@@ -55,15 +57,42 @@ public class MainVerticle extends AbstractVerticle {
             System.out.println("Accessing /users/:id route");
             authHandler.getUserById(routingContext);
         });
+        router.get("/users/:role").handler(routingContext -> {
+            System.out.println("Accessing /users/:role route");
+            authHandler.getTeamMembers(routingContext);
+        });
         router.route("/api/*").handler(JWTAuthHandler.create(jwtAuth));
 
-        // Define the route with role-based access
-  
-        // Allow both Project Managers and Team Members to access tasks
-        router.get("/tasks").handler(routingContext -> {
-            checkRole(routingContext, "project_manager", "team_member");
-            // Task logic here...
+        // add the task handler
+       // Initialize TaskHandler
+TaskHandler taskHandler = new TaskHandler(client);
+
+// Define Task Routes Directly
+router.post("/tasks").handler(ctx -> {
+    System.out.println("✅ Route /tasks POST triggered");
+    taskHandler.createTask(ctx);
 });
+
+router.get("/tasks/:projectId").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:projectId GET triggered");
+    taskHandler.getTasksByProject(ctx);
+});
+
+router.put("/tasks/:id").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:id PUT triggered");
+    taskHandler.updateTask(ctx);
+});
+
+router.delete("/tasks/:id").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:id DELETE triggered");
+    taskHandler.deleteTask(ctx);
+});
+
+router.put("/tasks/:id").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:id UNASSIGN triggered");
+    taskHandler.unassignTask(ctx);
+});
+
 ProjectHandler projectHandler = new ProjectHandler(client);
 // Create a new project (admin or project manager can do this)
 router.post("/projects").handler(ctx -> {
@@ -78,23 +107,25 @@ router.get("/projects").handler(ctx -> {
     projectHandler.getAllProjects(ctx);
 });
 
-// Get a project by ID (admin, project manager, or team member)
-router.get("/projects/:id").handler(routingContext -> {
-    checkRole(routingContext, "admin", "project_manager", "team_member");
-    projectHandler.getProjectById(routingContext);
+// Get a project by ID  
+router.get("/projects/:id").handler(ctx -> {
+    System.out.println("✅ Route /projects/:id GET triggered");
+    projectHandler.getProjectById(ctx);
 });
 
-// Update a project (admin or project manager)
-router.put("/projects/:id").handler(routingContext -> {
-    checkRole(routingContext, "admin", "project_manager");
-    projectHandler.updateProject(routingContext);
+// Update a project  
+router.put("/projects/:id").handler(ctx -> {
+    System.out.println("✅ Route /projects/:id PUT triggered");
+    projectHandler.updateProject(ctx);
 });
+
 
 // Delete a project (admin or project manager)
-router.delete("/projects/:id").handler(routingContext -> {
-    checkRole(routingContext, "admin", "project_manager");
-    projectHandler.deleteProject(routingContext);
+router.delete("/projects/:id").handler(ctx -> {
+    System.out.println("✅ Route /projects DELETE triggered");
+    projectHandler.deleteProject(ctx);
 });
+
 
 
 

@@ -1,6 +1,7 @@
 package com.example;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
@@ -53,7 +54,7 @@ public class AuthenticationHandler {
         System.out.println("Role: " + role);
 
         if (role == null) {
-            role = "team member";
+            role = "team_member";
         }
 
         // Simple validation (you can extend this further)
@@ -84,48 +85,102 @@ public class AuthenticationHandler {
     }
 
     // Login the user and issue JWT token
-    public void login(RoutingContext routingContext) {
-        JsonObject requestBody = routingContext.body().asJsonObject();
-        String username = requestBody.getString("username");
-        String password = requestBody.getString("password");
+//     public void login(RoutingContext routingContext) {
+//         JsonObject requestBody = routingContext.body().asJsonObject();
+//         String username = requestBody.getString("username");
+//         String password = requestBody.getString("password");
 
-        if (username == null || password == null) {
-            routingContext.response().setStatusCode(400).end("Username and Password are required.");
-            return;
-        }
+//         if (username == null || password == null) {
+//             routingContext.response().setStatusCode(400).end("Username and Password are required.");
+//             return;
+//         }
 
-        // Verify credentials against the database
-        String sql = "SELECT id, username, email, role, password FROM users WHERE username = $1";
-        client.preparedQuery(sql)
-        .execute(Tuple.of(username), ar -> {
-            if (ar.succeeded() && ar.result().rowCount() > 0) {
-                JsonObject user = new JsonObject();
-                ar.result().forEach(row -> {
-                    user.put("id", row.getInteger("id"));
-                    user.put("username", row.getString("username"));
-                    user.put("email", row.getString("email"));
-                    user.put("hashedPassword", row.getString("password"));
-                    user.put("role", row.getString("role"));
-                });
+//         // Verify credentials against the database
+//         String sql = "SELECT id, username, email, role, password FROM users WHERE username = $1";
+//         client.preparedQuery(sql)
+//         .execute(Tuple.of(username), ar -> {
+//             if (ar.succeeded() && ar.result().rowCount() > 0) {
+//                 JsonObject user = new JsonObject();
+//                 ar.result().forEach(row -> {
+//                     user.put("id", row.getInteger("id"));
+//                     user.put("username", row.getString("username"));
+//                     user.put("email", row.getString("email"));
+//                     user.put("hashedPassword", row.getString("password"));
+//                     user.put("role", row.getString("role"));
+//                 });
 
-                // Verify password using BCrypt
-                String hashedPassword = user.getString("hashedPassword");
-                if (!BCrypt.checkpw(password, hashedPassword)) {
-                    routingContext.response().setStatusCode(401).end("Invalid credentials.");
-                    return;
-                }
+//                 // Verify password using BCrypt
+//                 String hashedPassword = user.getString("hashedPassword");
+//                 if (!BCrypt.checkpw(password, hashedPassword)) {
+//                     routingContext.response().setStatusCode(401).end("Invalid credentials.");
+//                     return;
+//                 }
 
-                // Issue JWT token
-                String token = jwtAuth.generateToken(new JsonObject().put("username", user.getString("username")));
+//                 // Issue JWT token
+//                 String token = jwtAuth.generateToken(new JsonObject()
+//                 .put("username", user.getString("username"))
+//                 .put("role", user.getString("role")) );
 
-                routingContext.response()
-                    .putHeader("Content-Type", "application/json")
-                    .end(new JsonObject().put("token", token).encodePrettily());
-            } else {
+//                 routingContext.response()
+//                     .putHeader("Content-Type", "application/json")
+//                     .end(new JsonObject().put("token", token).encodePrettily());
+//             } else {
+//                 routingContext.response().setStatusCode(401).end("Invalid credentials.");
+//             }
+//         });
+// }
+
+public void login(RoutingContext routingContext) {
+    JsonObject requestBody = routingContext.body().asJsonObject();
+    String username = requestBody.getString("username");
+    String password = requestBody.getString("password");
+
+    if (username == null || password == null) {
+        routingContext.response().setStatusCode(400).end("Username and Password are required.");
+        return;
+    }
+
+    String sql = "SELECT id, username, email, role, password FROM users WHERE username = $1";
+    client.preparedQuery(sql)
+    .execute(Tuple.of(username), ar -> {
+        if (ar.succeeded() && ar.result().rowCount() > 0) {
+            JsonObject user = new JsonObject();
+            ar.result().forEach(row -> {
+                user.put("id", row.getInteger("id"));
+                user.put("username", row.getString("username"));
+                user.put("email", row.getString("email"));
+                user.put("hashedPassword", row.getString("password"));
+                user.put("role", row.getString("role"));
+            });
+
+            // Debug log
+            System.out.println("🔍 Loaded User: " + user.encode());
+
+            // Verify password
+            String hashedPassword = user.getString("hashedPassword");
+            if (!BCrypt.checkpw(password, hashedPassword)) {
                 routingContext.response().setStatusCode(401).end("Invalid credentials.");
+                return;
             }
-        });
+
+            // Create token payload
+            JsonObject tokenData = new JsonObject()
+                .put("username", user.getString("username"))
+                .put("role", user.getString("role"));
+
+            System.out.println("✅ Token Payload: " + tokenData.encode());
+
+            String token = jwtAuth.generateToken(tokenData, new io.vertx.ext.auth.JWTOptions().setAlgorithm("HS256"));
+
+            routingContext.response()
+                .putHeader("Content-Type", "application/json")
+                .end(new JsonObject().put("token", token).encodePrettily());
+        } else {
+            routingContext.response().setStatusCode(401).end("Invalid credentials.");
+        }
+    });
 }
+
 // Add this method to your AuthenticationHandler class
 public void getAllUsers(RoutingContext routingContext) {
     // SQL to fetch all users
@@ -200,5 +255,26 @@ public void getUserById(RoutingContext routingContext) {
                 .end("Failed to fetch user: " + cause.getMessage());
         });
 }
+
+public void getTeamMembers(RoutingContext ctx) {
+    client.query("SELECT id, name FROM users WHERE role = 'team_member'")
+        .execute(ar -> {
+            if (ar.succeeded()) {
+                JsonArray users = new JsonArray();
+                ar.result().forEach(row -> {
+                    users.add(new JsonObject()
+                        .put("id", row.getInteger("id"))
+                        .put("name", row.getString("name")));
+                });
+
+                ctx.response()
+                    .putHeader("Content-Type", "application/json")
+                    .end(users.encode());
+            } else {
+                ctx.response().setStatusCode(500).end("Failed to fetch team members");
+            }
+        });
+}
+
 
 }
