@@ -256,23 +256,36 @@ public void getUserById(RoutingContext routingContext) {
         });
 }
 
-public void getTeamMembers(RoutingContext ctx) {
-    client.query("SELECT id, name FROM users WHERE role = 'team_member'")
-        .execute(ar -> {
-            if (ar.succeeded()) {
-                JsonArray users = new JsonArray();
-                ar.result().forEach(row -> {
-                    users.add(new JsonObject()
-                        .put("id", row.getInteger("id"))
-                        .put("name", row.getString("name")));
-                });
+public void getTeamMembers(RoutingContext routingContext) {
+   
+    String sql = "SELECT id, username FROM users where role='team_member'";
+    
+    System.out.println("row....");
+    client.preparedQuery(sql)
+        .execute()
+        .onSuccess(rows -> {
+            // Prepare the response as a list of users
+            JsonObject response = new JsonObject();
+            List<JsonObject> usersList = new ArrayList<>();
 
-                ctx.response()
-                    .putHeader("Content-Type", "application/json")
-                    .end(users.encode());
-            } else {
-                ctx.response().setStatusCode(500).end("Failed to fetch team members");
-            }
+            rows.forEach(row -> {
+                System.out.println("row"+row);
+                JsonObject user = new JsonObject()
+                    .put("id", row.getInteger("id"))
+                    .put("username", row.getString("username"));
+                usersList.add(user);
+            });
+
+            response.put("users", usersList);
+System.out.println("users"+response);
+            routingContext.response()
+                .putHeader("Content-Type", "application/json")
+                .end(response.encodePrettily());
+        })
+        .onFailure(cause -> {
+            routingContext.response()
+                .setStatusCode(500)
+                .end("Failed to fetch users: " + cause.getMessage());
         });
 }
 

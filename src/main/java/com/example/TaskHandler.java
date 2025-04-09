@@ -117,14 +117,39 @@ public class TaskHandler {
                 }
             });
     }
-    public void unassignTask(RoutingContext ctx) {
-        int taskId = Integer.parseInt(ctx.pathParam("id"));
+    public void assignUserToTask(RoutingContext ctx) {
+        int taskId = Integer.parseInt(ctx.pathParam("taskId"));
+        JsonObject body = ctx.body().asJsonObject();
+        Integer userId = body.getInteger("userId");
+        System.out.println("taskid"+taskId);
+        System.out.println("user"+body);
+        if (userId == null) {
+            ctx.response().setStatusCode(400).end("User ID is required for assignment.");
+            return;
+        }
     
+        client.preparedQuery("UPDATE tasks SET assigned_to = $1 WHERE id = $2")
+            .execute(Tuple.of(userId, taskId), ar -> {
+                if (ar.succeeded()) {
+                    ctx.response().setStatusCode(200).end("Task assigned successfully");
+                } else {
+                    ctx.response().setStatusCode(500).end("Failed to assign task: " + ar.cause().getMessage());
+                }
+            });
+    }
+    
+    public void unassignTask(RoutingContext ctx) {
+        System.out.println("Unassign Task Endpoint Hit");
+
+        int taskId = Integer.parseInt(ctx.pathParam("taskId"));
+        System.out.println("Unassigning task with ID: " + taskId);
+
         client.preparedQuery("UPDATE tasks SET assigned_to = NULL WHERE id = $1")
             .execute(Tuple.of(taskId), ar -> {
                 if (ar.succeeded()) {
                     ctx.response().setStatusCode(200).end("Task unassigned");
                 } else {
+                    ar.cause().printStackTrace();
                     ctx.response().setStatusCode(500).end("Failed to unassign task: " + ar.cause().getMessage());
                 }
             });

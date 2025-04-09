@@ -53,14 +53,15 @@ public class MainVerticle extends AbstractVerticle {
             System.out.println("Accessing /users route");
             authHandler.getAllUsers(routingContext);
         });
+        router.get("/users/team-members").handler(routingContext -> {
+            System.out.println("Accessing /users/team-members route");
+            authHandler.getTeamMembers(routingContext);
+        });
         router.get("/users/:id").handler(routingContext -> {
             System.out.println("Accessing /users/:id route");
             authHandler.getUserById(routingContext);
         });
-        router.get("/users/:role").handler(routingContext -> {
-            System.out.println("Accessing /users/:role route");
-            authHandler.getTeamMembers(routingContext);
-        });
+
         router.route("/api/*").handler(JWTAuthHandler.create(jwtAuth));
 
         // add the task handler
@@ -83,15 +84,27 @@ router.put("/tasks/:id").handler(ctx -> {
     taskHandler.updateTask(ctx);
 });
 
-router.delete("/tasks/:id").handler(ctx -> {
-    System.out.println("✅ Route /tasks/:id DELETE triggered");
-    taskHandler.deleteTask(ctx);
+// router.delete("/tasks/:id").handler(ctx -> {
+//     System.out.println("✅ Route /tasks/:id DELETE triggered");
+//     taskHandler.deleteTask(ctx);
+// });
+
+// router.put("/tasks/:id").handler(ctx -> {
+//     System.out.println("✅ Route /tasks/:id UNASSIGN triggered");
+//     taskHandler.unassignTask(ctx);
+// });
+
+router.put("/tasks/:taskId/assign").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:taskId/assign PUT triggered");
+    taskHandler.assignUserToTask(ctx);
 });
 
-router.put("/tasks/:id").handler(ctx -> {
-    System.out.println("✅ Route /tasks/:id UNASSIGN triggered");
+router.put("/tasks/:taskId/unassign").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:taskId/unassign PUT triggered");
     taskHandler.unassignTask(ctx);
 });
+
+
 
 ProjectHandler projectHandler = new ProjectHandler(client);
 // Create a new project (admin or project manager can do this)
