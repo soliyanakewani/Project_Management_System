@@ -84,52 +84,7 @@ public class AuthenticationHandler {
             });
     }
 
-    // Login the user and issue JWT token
-//     public void login(RoutingContext routingContext) {
-//         JsonObject requestBody = routingContext.body().asJsonObject();
-//         String username = requestBody.getString("username");
-//         String password = requestBody.getString("password");
-
-//         if (username == null || password == null) {
-//             routingContext.response().setStatusCode(400).end("Username and Password are required.");
-//             return;
-//         }
-
-//         // Verify credentials against the database
-//         String sql = "SELECT id, username, email, role, password FROM users WHERE username = $1";
-//         client.preparedQuery(sql)
-//         .execute(Tuple.of(username), ar -> {
-//             if (ar.succeeded() && ar.result().rowCount() > 0) {
-//                 JsonObject user = new JsonObject();
-//                 ar.result().forEach(row -> {
-//                     user.put("id", row.getInteger("id"));
-//                     user.put("username", row.getString("username"));
-//                     user.put("email", row.getString("email"));
-//                     user.put("hashedPassword", row.getString("password"));
-//                     user.put("role", row.getString("role"));
-//                 });
-
-//                 // Verify password using BCrypt
-//                 String hashedPassword = user.getString("hashedPassword");
-//                 if (!BCrypt.checkpw(password, hashedPassword)) {
-//                     routingContext.response().setStatusCode(401).end("Invalid credentials.");
-//                     return;
-//                 }
-
-//                 // Issue JWT token
-//                 String token = jwtAuth.generateToken(new JsonObject()
-//                 .put("username", user.getString("username"))
-//                 .put("role", user.getString("role")) );
-
-//                 routingContext.response()
-//                     .putHeader("Content-Type", "application/json")
-//                     .end(new JsonObject().put("token", token).encodePrettily());
-//             } else {
-//                 routingContext.response().setStatusCode(401).end("Invalid credentials.");
-//             }
-//         });
-// }
-
+  
 public void login(RoutingContext routingContext) {
     JsonObject requestBody = routingContext.body().asJsonObject();
     String username = requestBody.getString("username");
@@ -153,7 +108,7 @@ public void login(RoutingContext routingContext) {
                 user.put("role", row.getString("role"));
             });
 
-            // Debug log
+            
             System.out.println("🔍 Loaded User: " + user.encode());
 
             // Verify password
@@ -181,7 +136,6 @@ public void login(RoutingContext routingContext) {
     });
 }
 
-// Add this method to your AuthenticationHandler class
 public void getAllUsers(RoutingContext routingContext) {
     // SQL to fetch all users
     String sql = "SELECT id, username, email, role FROM users";
@@ -189,7 +143,7 @@ public void getAllUsers(RoutingContext routingContext) {
     client.preparedQuery(sql)
         .execute()
         .onSuccess(rows -> {
-            // Prepare the response as a list of users
+            //response as a list of users
             JsonObject response = new JsonObject();
             List<JsonObject> usersList = new ArrayList<>();
 
@@ -215,9 +169,8 @@ public void getAllUsers(RoutingContext routingContext) {
         });
 }
 
-// Add this method to your AuthenticationHandler class
 public void getUserById(RoutingContext routingContext) {
-    // Extract user ID from the path parameters
+    // user id from the path parameters
     String userId = routingContext.request().getParam("id");
     
     if (userId == null) {
@@ -264,7 +217,7 @@ public void getTeamMembers(RoutingContext routingContext) {
     client.preparedQuery(sql)
         .execute()
         .onSuccess(rows -> {
-            // Prepare the response as a list of users
+            // response as a list of users
             JsonObject response = new JsonObject();
             List<JsonObject> usersList = new ArrayList<>();
 

@@ -5,6 +5,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 
 public class TaskHandler {
@@ -15,23 +16,26 @@ public class TaskHandler {
     }
 
 
-
    public void createTask(RoutingContext ctx) {
         JsonObject body = ctx.body().asJsonObject();
         Integer assignedTo = body.getValue("assigned_to") != null ? body.getInteger("assigned_to") : null;
+        Integer progress = body.getValue("progress") !=null ? body.getInteger("progress") :null;
 
-        client.preparedQuery("INSERT INTO tasks (project_id, name, description, status, assigned_to, created_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)")
+        client.preparedQuery("INSERT INTO tasks (project_id, name, description, status, assigned_to, progress, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING id")
             .execute(Tuple.of(
                 body.getInteger("project_id"),
                 body.getString("name"),
                 body.getString("description"),
                 body.getString("status"),
-                assignedTo
+                assignedTo,
+                progress
             ), ar -> {
                 if (ar.succeeded() && ar.result().size() > 0) {
-                    int taskId = ar.result().iterator().next().getInteger("id"); // Retrieve generated task ID
+                    RowSet<Row> result = ar.result();
+                    Row row = result.iterator().next();
+                    int taskId =row.getInteger("id"); // Retrieve generated task ID
                     ctx.response()
-                    // .putHeader("Content-Type", "application/json")
+                    .putHeader("Content-Type", "application/json")
                     .setStatusCode(201)
                     .end(new JsonObject().put("message", "Task created")
                     .put("id", taskId).encode());
@@ -57,7 +61,8 @@ public class TaskHandler {
                         .put("description", row.getString("description"))
                         .put("status", row.getString("status"))
                         .put("assigned_to", row.getInteger("assigned_to"))
-                        .put("created_at", row.getLocalDateTime("created_at").toString()); 
+                        .put("created_at", row.getLocalDateTime("created_at").toString())
+                        .put("progress", row.getValue("progress")); 
 
                     tasksArray.add(task);
                 });
@@ -74,12 +79,13 @@ public class TaskHandler {
 }
 
 
-   public void updateTask(RoutingContext ctx) {
+public void updateTask(RoutingContext ctx) {
+    
     int taskId = Integer.parseInt(ctx.pathParam("id"));
     JsonObject body = ctx.body().asJsonObject();
 
-    // Fetch existing task details first
-    String selectQuery = "SELECT name, description, status, assigned_to FROM tasks WHERE id = $1";
+    //  Existing task details first
+    String selectQuery = "SELECT name, description, status, assigned_to, progress FROM tasks WHERE id = $1";
     client.preparedQuery(selectQuery).execute(Tuple.of(taskId), res -> {
         if (res.succeeded() && res.result().size() > 0) {
             Row row = res.result().iterator().next();
@@ -88,22 +94,27 @@ public class TaskHandler {
             String name = body.getString("name", row.getString("name"));
             String description = body.getString("description", row.getString("description"));
             String status = body.getString("status", row.getString("status"));
-            Integer assignedTo = body.getInteger("assigned_to", row.getInteger("assigned_to"));  // 🔹 Simplified
+            Integer assignedTo = body.getInteger("assigned_to", row.getInteger("assigned_to"));
+            
+            // Check for progress and use the provided value, otherwise fallback to the existing value
+            Integer progress = body.containsKey("progress") ? body.getInteger("progress") : row.getInteger("progress");
 
-            // Now perform the update with retained values
-            String updateQuery = "UPDATE tasks SET name = $1, description = $2, status = $3, assigned_to = $4 WHERE id = $5";
-            client.preparedQuery(updateQuery).execute(Tuple.of(name, description, status, assignedTo, taskId), ar -> {
-                if (ar.succeeded()) {
-                    ctx.response().setStatusCode(200).end("Task updated");
-                } else {
-                    ctx.response().setStatusCode(500).end("Failed to update task: " + ar.cause().getMessage());
-                }
-            });
+            // Perform the update query
+            String updateQuery = "UPDATE tasks SET name = $1, description = $2, status = $3, assigned_to = $4, progress = $5 WHERE id = $6";
+            client.preparedQuery(updateQuery)
+                .execute(Tuple.of(name, description, status, assignedTo, progress, taskId), ar -> {
+                    if (ar.succeeded()) {
+                        ctx.response().setStatusCode(200).end("Task updated");
+                    } else {
+                        ctx.response().setStatusCode(500).end("Failed to update task: " + ar.cause().getMessage());
+                    }
+                });
         } else {
             ctx.response().setStatusCode(404).end("Task not found");
         }
     });
 }
+
 
 
    public void deleteTask(RoutingContext ctx) {

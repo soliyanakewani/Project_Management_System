@@ -18,7 +18,7 @@ public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        // Use DatabaseConnector to establish DB connection
+        // DatabaseConnector to establish DB connection
         client = DatabaseConnector.connect(vertx);
 
         client.query("SELECT 1")
@@ -31,7 +31,7 @@ public class MainVerticle extends AbstractVerticle {
         // Router Setup
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
-        router.route().handler(CorsHandler.create("*").allowedMethod(io.vertx.core.http.HttpMethod.GET).allowedMethod(io.vertx.core.http.HttpMethod.POST).allowedMethod(io.vertx.core.http.HttpMethod.PUT).allowedMethod(io.vertx.core.http.HttpMethod.DELETE).allowedMethod(io.vertx.core.http.HttpMethod.OPTIONS));
+        router.route().handler(CorsHandler.create("*").allowedMethod(io.vertx.core.http.HttpMethod.GET).allowedMethod(io.vertx.core.http.HttpMethod.POST).allowedMethod(io.vertx.core.http.HttpMethod.PUT).allowedMethod(io.vertx.core.http.HttpMethod.DELETE).allowedMethod(io.vertx.core.http.HttpMethod.PATCH).allowedMethod(io.vertx.core.http.HttpMethod.OPTIONS));
 
         // JWT Auth Setup
         JWTAuth jwtAuth = JWTAuth.create(vertx, new JWTAuthOptions()
@@ -69,7 +69,7 @@ public class MainVerticle extends AbstractVerticle {
 TaskHandler taskHandler = new TaskHandler(client);
 
 // Define Task Routes Directly
-router.post("/tasks").handler(ctx -> {
+router.post("/tasks/:projectId").handler(ctx -> {
     System.out.println("✅ Route /tasks POST triggered");
     taskHandler.createTask(ctx);
 });
@@ -84,10 +84,10 @@ router.put("/tasks/:id").handler(ctx -> {
     taskHandler.updateTask(ctx);
 });
 
-// router.delete("/tasks/:id").handler(ctx -> {
-//     System.out.println("✅ Route /tasks/:id DELETE triggered");
-//     taskHandler.deleteTask(ctx);
-// });
+router.delete("/tasks/:id").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:id DELETE triggered");
+    taskHandler.deleteTask(ctx);
+});
 
 // router.put("/tasks/:id").handler(ctx -> {
 //     System.out.println("✅ Route /tasks/:id UNASSIGN triggered");
