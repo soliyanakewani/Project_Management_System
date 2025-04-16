@@ -62,6 +62,31 @@ public class MainVerticle extends AbstractVerticle {
             authHandler.getUserById(routingContext);
         });
 
+        router.delete("/users/:id").handler(routingContext -> {
+            System.out.println("Accessing /users/:id route");
+            authHandler.deleteUser(routingContext);
+        });
+
+        router.put("/users/:id").handler(routingContext -> {
+            System.out.println("Accessing /users/:id route [PUT]");
+            authHandler.updateUser(routingContext);
+        });
+
+        router.route("/profile*").handler(JWTAuthHandler.create(jwtAuth)); // Protect both GET and PUT under /profile
+
+
+        router.get("/profile").handler(routingContext -> {
+            System.out.println("Accessing /profile route [GET]");
+            authHandler.getProfile(routingContext);
+        });
+        
+        router.put("/profile").handler(routingContext -> {
+            System.out.println("Accessing /profile route [PUT]");
+            authHandler.updateProfile(routingContext);
+        });
+        
+        
+
         router.route("/api/*").handler(JWTAuthHandler.create(jwtAuth));
 
         // add the task handler
