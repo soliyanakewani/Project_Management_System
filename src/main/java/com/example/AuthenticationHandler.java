@@ -29,10 +29,6 @@ public class AuthenticationHandler {
         this.client = client;
     }
 
-    
-
-    
-
     // Register a new user
     public void register(RoutingContext routingContext) {
         JsonObject requestBody = routingContext.body().asJsonObject();
@@ -284,7 +280,7 @@ public void getProfile(RoutingContext ctx) {
         ctx.response().setStatusCode(401).end("Unauthorized: No user logged in");
         return;
     }
-    JsonObject user = ctx.user().principal();
+    JsonObject user = ctx.user().principal(); 
     System.out.println("JWT Payload: " + user.encode());  // 👈 log it here
 
     String userId = user.getString("id");
