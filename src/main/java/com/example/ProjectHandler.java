@@ -1,5 +1,6 @@
 package com.example;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
@@ -258,4 +259,12 @@ public class ProjectHandler {
         List<String> validStatuses = Arrays.asList("New", "In Progress", "Completed", "On Hold");
         return validStatuses.contains(status);
     }
+    public Future<Void> updateProjectStatus(int projectId, String status) {
+        String sql = "UPDATE projects SET status = ? WHERE id = ?";
+        return client
+            .preparedQuery(sql)
+            .execute(Tuple.of(status, projectId))
+            .mapEmpty();
+    }
+    
 }

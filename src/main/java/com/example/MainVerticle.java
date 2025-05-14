@@ -104,6 +104,14 @@ router.get("/tasks/:projectId").handler(ctx -> {
     taskHandler.getTasksByProject(ctx);
 });
 
+router.get("/tasks/user/:userId").handler(ctx -> {
+    System.out.println("✅ Route /tasks/:userId GET triggered");
+    taskHandler.getTasksByUser(ctx);
+    
+});
+
+
+
 router.put("/tasks/:id").handler(ctx -> {
     System.out.println("✅ Route /tasks/:id PUT triggered");
     taskHandler.updateTask(ctx);

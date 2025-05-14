@@ -37,6 +37,14 @@ public class AuthenticationHandler {
             return;
         }
 
+        JsonObject authUser = routingContext.user() != null ? routingContext.user().principal() : null;
+
+           // 🔐 Only admins can register new users
+    if (authUser == null || !"ADMIN".equalsIgnoreCase(authUser.getString("role"))) {
+        routingContext.response().setStatusCode(403).end("Only admins can register new users.");
+        return;
+    }
+    
         String username = requestBody.getString("username");
         String email = requestBody.getString("email");
         String password = requestBody.getString("password");
@@ -52,12 +60,14 @@ public class AuthenticationHandler {
         System.out.println("Password: " + (password == null ? "NULL" : "RECEIVED"));
         System.out.println("Role: " + role);
 
-        if (role == null) {
+        if (role == null || role.trim().equalsIgnoreCase("null") || role.trim().isEmpty()) {
             role = "team_member";
         }
+        
+        
 
         // Simple validation (you can extend this further)
-        if (username == null || email == null  || password == null || role == null) {
+        if (username == null || email == null  || password == null ) {
             routingContext.response().setStatusCode(400).end("All fields are required.");
             return;
         }
